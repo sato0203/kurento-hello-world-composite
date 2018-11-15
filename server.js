@@ -81,7 +81,7 @@ var wss = new ws.Server({
  * Management of WebSocket messages
  */
 wss.on('connection', function(ws) {
-    var sessionId = null;
+    var sessionId = 0;
     var request = ws.upgradeReq;
     var response = {
         writeHead : {}
@@ -205,32 +205,32 @@ function start(sessionId, ws, sdpOffer, callback) {
                         }
                     }
 
-                    composite.createHubPort(function(error,hubPort){
+                    composite.createHubPort(function(error,hubPortIn1){
                         if(error){
                             pipeline.release();
                             return callback(error)
                         }
-                        hubPort.connect(webRtcEndpoint,function(error){
+                        webRtcEndpoint.connect(hubPortIn1,function(error){
                             if(error){
                                 pipeline.release();
                                 return callback(error)
                             }
-                            composite.createHubPort(function(error,hubPort2){
+                            composite.createHubPort(function(error,hubPortIn2){
                                 if(error){
                                     pipeline.release();
                                     return callback(error)
                                 }
-                                hubPort2.connect(webRtcEndpoint,function(error){
+                                webRtcEndpoint.connect(hubPortIn2,function(error){
                                     if(error){
                                         pipelin.release();
                                         return callback(error)
                                     }
-                                    composite.createHubPort(function(error,hubPort3){
+                                    composite.createHubPort(function(error,hubPortOutput){
                                         if(error){
                                             pipeline.release();
                                             return callback(error)
                                         }
-                                        connectMediaElements(webRtcEndpoint,hubPort3, function(error) {
+                                        hubPortOutput.connect(webRtcEndpoint, function(error) {
                                             if (error) {
                                                 pipeline.release();
                                                 return callback(error);
@@ -292,6 +292,25 @@ function createComposite(pipeline,ws,callback){
         console.dir(callback)
         return callback(null,composite)
     })
+}
+
+class Kurento{
+    constructor() {
+        if (kurentoClient !== null) {
+            return callback(null, kurentoClient);
+        }
+    
+        kurento(argv.ws_uri, function(error, _kurentoClient) {
+            if (error) {
+                console.log("Could not find media server at address " + argv.ws_uri);
+                return callback("Could not find media server at address" + argv.ws_uri
+                        + ". Exiting with error " + error);
+            }
+    
+            kurentoClient = _kurentoClient;
+            callback(null, kurentoClient);
+        });
+    }
 }
 
 function connectMediaElements(webRtcEndpoint,hubPort, callback) {
